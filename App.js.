@@ -1,0 +1,53 @@
+import React, { useState } from "react";
+
+export default function App() {
+  const [items, setItems] = useState([]);
+
+  const addItem = (e) => {
+    e.preventDefault();
+    const item = e.target.elements.item.value;
+    if (item) setItems([...items, item]);
+    e.target.reset();
+  };
+
+  return (
+    <div>
+      <h1>Szearl World</h1>
+      <form onSubmit={addItem}>
+        <input name="item" type="text" placeholder="Add item..." />
+        <button type="submit">Add</button>
+      </form>
+      <ul>
+        {items.map((item, idx) => (
+          <li key={idx}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}import React, { useState } from "react";
+
+export default function App() {
+  const [items, setItems] = useState([]);
+
+  const addItem = (e) => {
+    e.preventDefault();
+    const item = e.target.elements.item.value;
+    if (item) setItems([...items, item]);
+    e.target.reset();
+  };
+
+  return (
+    <div>
+      <h1>Szearl World</h1>
+      <form onSubmit={addItem}>
+        <input name="item" type="text" placeholder="Add item..." />
+        <button type="submit">Add</button>
+      </form>
+      <ul>
+        {items.map((item, idx) => (
+          <li key={idx}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
