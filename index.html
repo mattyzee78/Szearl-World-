@@ -1458,6 +1458,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // The access token is valid for ~1 hour and auto-refreshes.
 // Docs: https://developers.google.com/identity/oauth2/web/guides/use-token-model
 var _tc = null;
+var _silentRefresh = false; // true when refreshing an existing token (vs. first sign-in)
 function getTC() {
   if (_tc) return _tc;
   if (typeof google === 'undefined') return null;
@@ -1489,11 +1490,18 @@ function resetBtn() {
 }
 
 function onToken(r) {
-  if (r.error) { t('Sign-in failed: ' + r.error, true); resetBtn(); return; }
+  var wasRefresh = _silentRefresh;
+  _silentRefresh = false;
+  if (r.error) {
+    // Silent refresh failure is not user-facing — just keep the old token
+    if (!wasRefresh) { t('Sign-in failed: ' + r.error, true); resetBtn(); }
+    return;
+  }
   S.token = r.access_token;
-  // Schedule silent token refresh before expiry
-  setTimeout(function() { silentTokenRefresh(); }, ((r.expires_in||3600) - 120) * 1000);
-  // Fetch user profile and persist it so next session can skip sign-in
+  // Schedule the NEXT silent refresh (only here — silentTokenRefresh must not self-schedule)
+  setTimeout(silentTokenRefresh, ((r.expires_in || 3600) - 120) * 1000);
+  if (wasRefresh) return; // token quietly updated — no UI changes needed
+  // First sign-in: fetch profile, show app, load calendars
   gf('https://www.googleapis.com/oauth2/v3/userinfo').then(function(u) {
     S.user = u;
     updateProfile();
@@ -1509,12 +1517,12 @@ function showMainApp() {
 }
 
 // Silent token refresh — uses Google's existing browser session, no UI shown
+// NOTE: must NOT self-schedule; onToken() handles scheduling the next refresh
 function silentTokenRefresh() {
   var tc = getTC();
   if (!tc) return;
-  tc.requestAccessToken({prompt: ''});
-  // Schedule next refresh
-  setTimeout(silentTokenRefresh, 50 * 60 * 1000); // every 50 min
+  _silentRefresh = true;
+  tc.requestAccessToken({prompt: 'none'});
 }
 
 // Try to restore session on app load — skips sign-in if Google session active
@@ -1536,10 +1544,11 @@ function tryAutoSignIn() {
   // GIS will call onToken if successful, or error_callback if not
   var tc = getTC();
   if (tc) {
-    tc.requestAccessToken({prompt: ''});
+    _silentRefresh = true;
+    tc.requestAccessToken({prompt: 'none'});
     // If no response in 4s, show auth screen (user needs to sign in manually)
     setTimeout(function() {
-      if (!S.token) resetBtn();
+      if (!S.token) { _silentRefresh = false; resetBtn(); }
     }, 4000);
   }
 }
