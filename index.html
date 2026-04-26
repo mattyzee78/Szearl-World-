@@ -1459,6 +1459,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Docs: https://developers.google.com/identity/oauth2/web/guides/use-token-model
 var _tc = null;
 var _silentRefresh = false; // true when refreshing an existing token (vs. first sign-in)
+// iOS Chrome (and all iOS browsers) cannot open OAuth popups outside a direct user gesture.
+// Any background requestAccessToken call causes a full-page redirect → infinite loop.
+var _isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 function getTC() {
   if (_tc) return _tc;
   if (typeof google === 'undefined') return null;
@@ -1500,13 +1503,14 @@ function onToken(r) {
   var wasRefresh = _silentRefresh;
   _silentRefresh = false;
   if (r.error) {
-    // Silent refresh failure is not user-facing — just keep the old token
     if (!wasRefresh) { t('Sign-in failed: ' + r.error, true); resetBtn(); }
     return;
   }
   S.token = r.access_token;
-  // Schedule the NEXT silent refresh (only here — silentTokenRefresh must not self-schedule)
-  setTimeout(silentTokenRefresh, ((r.expires_in || 3600) - 120) * 1000);
+  // Only schedule background token refresh on desktop — mobile uses button-tap re-auth
+  if (!_isMobile) {
+    setTimeout(silentTokenRefresh, ((r.expires_in || 3600) - 120) * 1000);
+  }
   if (wasRefresh) return; // token quietly updated — no UI changes needed
   // First sign-in: fetch profile, show app, load calendars
   gf('https://www.googleapis.com/oauth2/v3/userinfo').then(function(u) {
@@ -1523,37 +1527,42 @@ function showMainApp() {
   document.getElementById('mainApp').style.display = 'flex';
 }
 
-// Silent token refresh — uses Google's existing browser session, no UI shown
-// NOTE: must NOT self-schedule; onToken() handles scheduling the next refresh
+// Silent token refresh — desktop only; mobile uses button-tap re-auth to avoid redirect loops
 function silentTokenRefresh() {
+  if (_isMobile) return;
   var tc = getTC();
   if (!tc) return;
   _silentRefresh = true;
   tc.requestAccessToken({prompt: 'none'});
 }
 
-// Try to restore session on app load — skips sign-in if Google session active
+// Try to restore session on app load
 function tryAutoSignIn() {
-  if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) return; // not configured
+  if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) return;
   var stored = null;
   try { stored = JSON.parse(localStorage.getItem('sw_user') || 'null'); } catch(e) {}
-  if (!stored) return; // never signed in before
+  if (!stored) return;
 
-  // Restore profile display immediately so it feels instant
+  // Always restore the stored profile for display
   S.user = stored;
   updateProfile();
 
-  // Show a loading state on auth screen while we silently refresh
-  var btn = document.getElementById('signInBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Signing in…'; }
+  if (_isMobile) {
+    // Mobile: never auto-trigger OAuth — it causes a redirect loop on iOS Chrome/Safari.
+    // Personalise the sign-in button so returning users know they just need to tap.
+    var firstName = (stored.name || '').split(' ')[0] || stored.email || '';
+    var btn = document.getElementById('signInBtn');
+    if (btn && firstName) btn.innerHTML = btn.innerHTML.replace('Sign in with Google', 'Continue as ' + firstName);
+    return;
+  }
 
-  // Request token silently (no prompt — uses browser Google cookie)
-  // GIS will call onToken if successful, or error_callback if not
+  // Desktop: silent token refresh using the existing Google browser session
+  var btn2 = document.getElementById('signInBtn');
+  if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ Signing in…'; }
   var tc = getTC();
   if (tc) {
     _silentRefresh = true;
     tc.requestAccessToken({prompt: 'none'});
-    // If no response in 4s, show auth screen (user needs to sign in manually)
     setTimeout(function() {
       if (!S.token) { _silentRefresh = false; resetBtn(); }
     }, 4000);
@@ -1595,8 +1604,16 @@ function gf(url, opts) {
   Object.assign(hdrs, opts.headers || {});
   return fetch(url, Object.assign({}, opts, {headers: hdrs})).then(function(res) {
     if (res.status === 401) {
-      t('Session expired — re-authorising…');
-      var tc = getTC(); if (tc) tc.requestAccessToken({prompt: ''});
+      S.token = null;
+      if (_isMobile) {
+        // On mobile, calling requestAccessToken here causes a redirect loop.
+        // Sign the user out cleanly and let them tap the button to re-authenticate.
+        doSignOut();
+        t('Session expired — please sign in again', true);
+      } else {
+        t('Session expired — re-authorising…');
+        var tc = getTC(); if (tc) { _silentRefresh = true; tc.requestAccessToken({prompt: 'none'}); }
+      }
       throw new Error('Token expired');
     }
     if (!res.ok) {
