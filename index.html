@@ -1466,16 +1466,14 @@ var _isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 // read the token back from the URL hash when the page reloads after Google auth.
 function checkOAuthRedirect() {
   if (!window.location.hash) return false;
-  var p = {};
-  window.location.hash.substring(1).split('&').forEach(function(pair) {
-    var kv = pair.split('='); p[kv[0]] = decodeURIComponent(kv[1] || '');
-  });
+  var params = new URLSearchParams(window.location.hash.substring(1));
+  var token = params.get('access_token');
   // Clean the hash immediately so a page refresh doesn't re-process it
   history.replaceState(null, '', window.location.pathname + window.location.search);
-  if (!p.access_token) return false;
-  S.token = p.access_token;
+  if (!token) return false;
+  S.token = token;
   // When token expires on mobile, sign out cleanly (no background refresh)
-  var exp = parseInt(p.expires_in || '3600', 10);
+  var exp = parseInt(params.get('expires_in') || '3600', 10);
   setTimeout(function() {
     if (S.token) { doSignOut(); t('Session expired — tap Sign in to continue', true); }
   }, exp * 1000);
