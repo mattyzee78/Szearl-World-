@@ -1449,19 +1449,45 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   setDate();
   document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
+  // On mobile, check if we just returned from a Google OAuth redirect with a token in the URL
+  if (checkOAuthRedirect()) return;
   // Try to restore previous session silently (runs after GIS script loads)
   setTimeout(tryAutoSignIn, 500);
 });
 
 // ─── GOOGLE OAUTH ─────────────────────────────────────────────────────────────
-// Uses Google Identity Services (GIS) — no backend server needed.
-// The access token is valid for ~1 hour and auto-refreshes.
-// Docs: https://developers.google.com/identity/oauth2/web/guides/use-token-model
 var _tc = null;
-var _silentRefresh = false; // true when refreshing an existing token (vs. first sign-in)
-// iOS Chrome (and all iOS browsers) cannot open OAuth popups outside a direct user gesture.
-// Any background requestAccessToken call causes a full-page redirect → infinite loop.
+var _silentRefresh = false;
 var _isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// ── Mobile OAuth redirect flow ───────────────────────────────────────────────
+// iOS Chrome cannot reliably open OAuth popups — GIS's popup-based token model
+// causes redirect loops. Instead, on mobile we do a plain OAuth redirect and
+// read the token back from the URL hash when the page reloads after Google auth.
+function checkOAuthRedirect() {
+  if (!window.location.hash) return false;
+  var p = {};
+  window.location.hash.substring(1).split('&').forEach(function(pair) {
+    var kv = pair.split('='); p[kv[0]] = decodeURIComponent(kv[1] || '');
+  });
+  // Clean the hash immediately so a page refresh doesn't re-process it
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  if (!p.access_token) return false;
+  S.token = p.access_token;
+  // When token expires on mobile, sign out cleanly (no background refresh)
+  var exp = parseInt(p.expires_in || '3600', 10);
+  setTimeout(function() {
+    if (S.token) { doSignOut(); t('Session expired — tap Sign in to continue', true); }
+  }, exp * 1000);
+  // Fetch profile and enter the app
+  gf('https://www.googleapis.com/oauth2/v3/userinfo').then(function(u) {
+    S.user = u; updateProfile();
+    try { localStorage.setItem('sw_user', JSON.stringify({email:u.email,name:u.name,picture:u.picture})); } catch(e) {}
+  }).catch(function(){});
+  showMainApp();
+  loadCals().then(function() { return doSync(); }).then(function() { t('Connected to Google Calendar!'); });
+  return true;
+}
 function getTC() {
   if (_tc) return _tc;
   if (typeof google === 'undefined') return null;
@@ -1486,11 +1512,24 @@ window.onGoogleLibraryLoad = function() { getTC(); };
 
 function doSignIn() {
   if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) { t('Set your Client ID first', true); return; }
+  if (_isMobile) {
+    // Mobile: use a plain OAuth redirect instead of GIS popups.
+    // Google redirects back here with #access_token=... which checkOAuthRedirect() handles.
+    var uri = window.location.origin + window.location.pathname;
+    window.location.href = 'https://accounts.google.com/o/oauth2/auth?' +
+      'client_id=' + encodeURIComponent(GOOGLE_CLIENT_ID) +
+      '&redirect_uri=' + encodeURIComponent(uri) +
+      '&response_type=token' +
+      '&scope=' + encodeURIComponent(GCAL_SCOPE) +
+      '&include_granted_scopes=true';
+    return;
+  }
+  // Desktop: use GIS popup flow
   var tc = getTC();
   if (!tc) { t('Google Sign-In still loading — please try again', true); return; }
   var b = document.getElementById('signInBtn');
   b.disabled = true; b.textContent = 'Connecting to Google…';
-  tc.requestAccessToken(); // no prompt arg — let GIS decide; never delay on iOS
+  tc.requestAccessToken();
 }
 
 function resetBtn() {
