@@ -1547,6 +1547,7 @@ function initFirestore() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     _db = firebase.firestore();
+    updateProfile(); // refresh badge now that _db is set
     loadCals();
     subscribeEvents();
     subscribeLists();
@@ -1578,7 +1579,12 @@ function subscribeEvents() {
       renderViews();
     }, function(err) {
       if (sb) sb.style.animation = '';
-      t('Sync error: ' + err.message, true);
+      var msg = err.message || '';
+      if (msg.indexOf('not enabled') !== -1 || msg.indexOf('NOT_FOUND') !== -1) {
+        t('Firestore not set up — go to Firebase console → Build → Firestore Database → Create database', true);
+      } else {
+        t('Sync error: ' + msg, true);
+      }
     });
 }
 
