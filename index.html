@@ -1508,7 +1508,28 @@ document.addEventListener('DOMContentLoaded', function() {
   setDate();
   document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
   tryAutoSignIn();
+  setupBackHandler();
 });
+
+function setupBackHandler() {
+  history.pushState({sw: 1}, '');
+  window.addEventListener('popstate', function() {
+    // Always push back so the browser can't exit the app
+    history.pushState({sw: 1}, '');
+    // 1. Close any open modal
+    var mo = document.querySelector('.mo.on');
+    if (mo) { closeM(mo.id); return; }
+    // 2. Close Kids Board if open
+    var kb = document.getElementById('kidsBoard');
+    if (kb && (kb.style.display === 'flex' || kb.style.display === 'block')) {
+      kb.style.display = 'none'; return;
+    }
+    // 3. Go home if on another tab
+    var cur = document.querySelector('.ni.on');
+    if (cur && cur.id !== 'ni-home') { goTab('home'); return; }
+    // Already on home — do nothing
+  });
+}
 
 function tryAutoSignIn() {
   var stored = null;
@@ -1729,9 +1750,9 @@ function saveEv() {
   var col = _db.collection('families').doc(FAMILY_CODE).collection('events');
   var promise = S.curId ? col.doc(S.curId).set(ev) : col.add(ev);
   promise
-    .then(function() { closeM('mAdd'); t('Event saved!'); })
+    .then(function() { S.curId = null; closeM('mAdd'); t('Event saved!'); })
     .catch(function(e) { t('Save failed: ' + e.message, true); })
-    .finally(function() { btn.disabled = false; btn.textContent = 'Save Event →'; });
+    .then(function() { btn.disabled = false; btn.textContent = 'Save Event →'; });
 }
 
 // ─── DELETE EVENT ─────────────────────────────────────────────────────────────
@@ -1748,11 +1769,13 @@ function delEv() {
 // ─── EDIT EVENT ───────────────────────────────────────────────────────────────
 function editEv() {
   if (!S.curId) return;
-  // Open the add-event form pre-filled with this event's data
   var ev = S.events.find(function(e) { return e.id === S.curId; });
   if (!ev) return;
+  var editId = S.curId; // save before closeM clears anything
   closeM('mDetail');
-  openM('mAdd');
+  openAdd(); // clears all fields and resets S.curId — we restore it below
+  S.curId = editId;
+  // Pre-fill fields
   document.getElementById('eTitle').value = ev.summary || '';
   if (ev.start && ev.start.dateTime) {
     document.getElementById('eDate').value = ev.start.dateTime.slice(0, 10);
@@ -1763,7 +1786,25 @@ function editEv() {
   if (ev.end && ev.end.dateTime) document.getElementById('eEndTime').value = ev.end.dateTime.slice(11, 16);
   var locEl = document.getElementById('eLoc'); if (locEl) locEl.value = ev.location || '';
   var selCal = document.getElementById('eCal'); if (selCal && ev._calId) selCal.value = ev._calId;
-  // Keep S.curId so saveEv() knows to update rather than insert
+  // Parse category and members from description
+  var desc = ev.description || '';
+  var catMatch = desc.match(/Category:\s*([^\n]+)/);
+  var memMatch = desc.match(/Members:\s*([^\n]+)/);
+  var notesMatch = desc.replace(/Category:[^\n]*\n?/,'').replace(/Members:[^\n]*\n?/,'').trim();
+  if (catMatch) {
+    var catName = catMatch[1].trim();
+    document.querySelectorAll('.cc').forEach(function(el) {
+      if (el.textContent.trim() === catName) el.classList.add('on');
+    });
+  }
+  if (memMatch) {
+    var mems = memMatch[1].split(',').map(function(m) { return m.trim().toLowerCase(); });
+    document.querySelectorAll('.msc').forEach(function(el) {
+      if (mems.indexOf((el.dataset.m || '').toLowerCase()) !== -1) el.classList.add('on');
+    });
+  }
+  var notesEl = document.getElementById('eNotes'); if (notesEl) notesEl.value = notesMatch;
+  openM('mAdd');
   document.getElementById('saveBtn').textContent = 'Update Event →';
 }
 
@@ -2135,6 +2176,8 @@ document.addEventListener('keydown', function(e) {
 });
 
 function openAdd(preset) {
+  S.curId = null; // always reset so we create, not update
+  document.getElementById('saveBtn').textContent = 'Save Event →';
   document.getElementById('eTitle').value = '';
   document.getElementById('eLoc').value   = '';
   document.getElementById('eNotes').value = '';
