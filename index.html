@@ -75,14 +75,40 @@ STEP 6: Calendar sharing between Matt & Katharine
     - Any other calendars shared between them
 =================================================================
 -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase SDK (compat v9 — works as global variables, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 // ============================================================
-//  STEP 4: PASTE YOUR GOOGLE CLIENT ID HERE
+//  SZEARL WORLD SETUP — one-time (about 10 min)
 // ============================================================
-const GOOGLE_CLIENT_ID = '18133057712-r68gmgj3vbqm45jl3cc6lt5rc4u8alpf.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar';
-const GCAL_API   = 'https://www.googleapis.com/calendar/v3';
+//  1. Go to https://console.firebase.google.com
+//  2. Create a project called "Szearl World"
+//  3. Add a Web app — copy the firebaseConfig object below
+//  4. Go to Firestore Database → Create database (Start in test mode)
+//  5. Replace the placeholder config below with your real values
+//  6. Change FAMILY_CODE to something unique and private
+//
+//  Firestore security rules (Firestore → Rules tab):
+//  rules_version = '2';
+//  service cloud.firestore {
+//    match /databases/{database}/documents {
+//      match /families/{familyId}/{document=**} {
+//        allow read, write: if true;
+//      }
+//    }
+//  }
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+// Change this to anything unique and private — all family members must use the same value
+const FAMILY_CODE = 'szearl-family-2024';
 // ============================================================
 </script>
 <script>
@@ -301,6 +327,12 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
 .gsb:active{transform:scale(.97)}
 .gsb:disabled{opacity:.6;cursor:not-allowed}
 .sk{font-size:13px;font-weight:700;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.fp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:320px}
+.fpc{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:14px 8px;background:var(--sf);border-radius:20px;border:2px solid var(--br);box-shadow:var(--shl);transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .15s}
+.fpc:hover{transform:translateY(-3px);box-shadow:var(--sh);border-color:var(--lav)}
+.fpc:active{transform:scale(.94)}
+.fpa{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.fpn{font-size:13px;font-weight:800;color:var(--tx)}
 .warn{background:#fef3d8;border:1.5px solid var(--amber);border-radius:14px;padding:14px 16px;font-size:13px;font-weight:600;color:#92400e;text-align:left;width:100%;line-height:1.5}
 .warn code{background:rgba(0,0,0,.08);padding:2px 5px;border-radius:4px;font-family:monospace}
 /* MODALS */
@@ -762,32 +794,33 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
     <div class="att">Szearl World</div>
     <p style="font-family:Quicksand,sans-serif;font-size:15px;font-weight:600;color:var(--t3);margin-top:4px">Your family's personal organiser</p>
   </div>
-  <div class="afp">
-    <div class="aa" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9)">&#128104;</div>
-    <div class="aa" style="background:linear-gradient(135deg,#ff6b8a,#f43f5e)">&#128105;</div>
-    <div class="aa" style="background:linear-gradient(135deg,#c084fc,#a855f7)">&#128103;</div>
-    <div class="aa" style="background:linear-gradient(135deg,#34d399,#10b981)">&#128102;</div>
-    <div class="aa" style="background:linear-gradient(135deg,#fb923c,#f97316)">&#129490;</div>
-  </div>
-  <div class="afs">
-    <div class="af"><span class="afi">&#128197;</span><span class="aft">All your Google Calendars in one beautiful family view</span></div>
-    <div class="af"><span class="afi">&#128106;</span><span class="aft">See what everyone's up to at a glance</span></div>
-    <div class="af"><span class="afi">&#128722;</span><span class="aft">Shared shopping lists, routines, and reminders</span></div>
-  </div>
   <div id="setupWarn" class="warn" style="display:none">
-    &#9888; <strong>Setup needed:</strong> Open this file in a text editor, find <code>YOUR_CLIENT_ID_HERE</code> and replace it with your Google OAuth Client ID. Full setup instructions are in the comment block at the top of this file.
+    &#9888; <strong>Setup needed:</strong> Open this file in a text editor, find <code>FIREBASE_CONFIG</code> and replace with your Firebase project config. Full setup instructions are in the comment block at the top of this file.
   </div>
-  <button class="gsb" id="signInBtn" onclick="doSignIn()">
-    <svg width="22" height="22" viewBox="0 0 48 48">
-      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-    </svg>
-    Sign in with Google
-  </button>
-  <span class="sk" onclick="doDemo()">Continue in demo mode (no real calendar) &#8594;</span>
-  <p style="font-size:11px;font-weight:600;color:var(--t3);max-width:280px;line-height:1.5">Each family member signs in on their own device with their own Google account. Share calendars in Google Calendar to see each other's events.</p>
+  <p style="font-size:17px;font-weight:800;color:var(--tx)">Who are you?</p>
+  <div class="fp-grid">
+    <div class="fpc" onclick="doSignIn('Matt')">
+      <div class="fpa" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9)">&#128104;</div>
+      <div class="fpn">Matt</div>
+    </div>
+    <div class="fpc" onclick="doSignIn('Katharine')">
+      <div class="fpa" style="background:linear-gradient(135deg,#ff6b8a,#f43f5e)">&#128105;</div>
+      <div class="fpn">Katharine</div>
+    </div>
+    <div class="fpc" onclick="doSignIn('Maggie')">
+      <div class="fpa" style="background:linear-gradient(135deg,#c084fc,#a855f7)">&#128103;</div>
+      <div class="fpn">Maggie</div>
+    </div>
+    <div class="fpc" onclick="doSignIn('Joe')">
+      <div class="fpa" style="background:linear-gradient(135deg,#34d399,#10b981)">&#128102;</div>
+      <div class="fpn">Joe</div>
+    </div>
+    <div class="fpc" onclick="doSignIn('Louis')">
+      <div class="fpa" style="background:linear-gradient(135deg,#fb923c,#f97316)">&#129490;</div>
+      <div class="fpn">Louis</div>
+    </div>
+  </div>
+  <span class="sk" onclick="doDemo()">Continue in demo mode &#8594;</span>
 </div>
 
 <!-- ═══════════ MAIN APP ═══════════ -->
@@ -803,14 +836,14 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
       <div class="ib" onclick="t('Notifications coming soon')">&#128276;</div>
     </div>
   </div>
-  <div id="demoBanner" class="infob" style="display:none">&#8505; Demo mode &#8212; sign in with Google to sync real calendars</div>
+  <div id="demoBanner" class="infob" style="display:none">&#8505; Demo mode &#8212; tap a family member name on the home screen to use the live calendar</div>
   <div style="padding:12px 20px 4px">
     <div style="font-size:13px;font-weight:700;color:var(--t2)" id="hDate"></div>
   </div>
   <div class="tbn ani" onclick="goTab('calendar')">
     <div class="tbl">Today at a glance</div>
     <div class="tbc" id="tCount">Loading&#8230;</div>
-    <div class="tbs" id="tSub">Syncing with Google Calendar&#8230;</div>
+    <div class="tbs" id="tSub">Loading family events&#8230;</div>
   </div>
   <!-- THIS WEEK BUTTON -->
   <div style="padding:0 20px 16px">
@@ -976,7 +1009,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
       <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--br)"><div style="width:32px;height:32px;border-radius:10px;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128247;</div><div><div style="font-size:13px;font-weight:800;color:var(--tx)">1. Upload your image</div><div style="font-size:12px;font-weight:600;color:var(--t3);margin-top:1px">Photo, screenshot, or file</div></div></div>
       <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--br)"><div style="width:32px;height:32px;border-radius:10px;background:var(--al);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#10024;</div><div><div style="font-size:13px;font-weight:800;color:var(--tx)">2. AI reads the details</div><div style="font-size:12px;font-weight:600;color:var(--t3);margin-top:1px">Date, time, location &amp; more</div></div></div>
       <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--br)"><div style="width:32px;height:32px;border-radius:10px;background:#f3e8ff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128203;</div><div><div style="font-size:13px;font-weight:800;color:var(--tx)">3. You review &amp; edit</div><div style="font-size:12px;font-weight:600;color:var(--t3);margin-top:1px">Check everything before saving</div></div></div>
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px"><div style="width:32px;height:32px;border-radius:10px;background:var(--sl);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#10003;</div><div><div style="font-size:13px;font-weight:800;color:var(--tx)">4. Saved to your calendar</div><div style="font-size:12px;font-weight:600;color:var(--t3);margin-top:1px">Syncs to Google Calendar</div></div></div>
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px"><div style="width:32px;height:32px;border-radius:10px;background:var(--sl);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#10003;</div><div><div style="font-size:13px;font-weight:800;color:var(--tx)">4. Saved to family calendar</div><div style="font-size:12px;font-weight:600;color:var(--t3);margin-top:1px">Syncs to all family devices</div></div></div>
     </div>
   </div>
   <div style="margin:0 20px 16px;display:flex;gap:10px;align-items:center;background:var(--sl);border-radius:14px;padding:12px 14px">
@@ -1174,7 +1207,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
       <option value="RRULE:FREQ=YEARLY">Every year</option>
     </select>
   </div>
-  <div class="ma"><button class="bps" onclick="closeM('mAdd')">Cancel</button><button class="bp" id="saveBtn" onclick="saveEv()">Save to Google Calendar &#8594;</button></div>
+  <div class="ma"><button class="bps" onclick="closeM('mAdd')">Cancel</button><button class="bp" id="saveBtn" onclick="saveEv()">Save Event &#8594;</button></div>
   <div style="height:20px"></div>
 </div>
 </div>
@@ -1191,7 +1224,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
   <div class="dr2" id="dLocR" style="display:none"><div class="dri">&#128205;</div><div class="drb"><div class="drl">Location</div><div class="drv" id="dLoc"></div></div></div>
   <div class="dr2"><div class="dri">&#128197;</div><div class="drb"><div class="drl">Calendar</div><div class="drv" id="dCal"></div></div></div>
   <div class="dr2" id="dDescR" style="display:none"><div class="dri">&#128221;</div><div class="drb"><div class="drl">Notes</div><div class="drv" id="dDesc"></div></div></div>
-  <!-- Local note/reminder — stored in app, not in Google Calendar -->
+  <!-- Local note/reminder — stored in app, private per device -->
   <div style="padding:14px 20px 6px">
     <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">&#128203; My note</div>
     <textarea id="evNoteInput" rows="2"
@@ -1200,7 +1233,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
       onfocus="this.style.borderColor='var(--brand)'"
       onblur="this.style.borderColor='var(--br)';saveEvNote()"
       oninput="saveEvNote()"></textarea>
-    <div style="font-size:11px;font-weight:600;color:var(--t3);margin-top:4px">Saved locally &#183; not synced to Google Calendar</div>
+    <div style="font-size:11px;font-weight:600;color:var(--t3);margin-top:4px">Saved locally &#183; private to this device</div>
   </div>
   <div class="da">
     <button class="dab" onclick="editEv()">&#9999;&#65039; Edit in Google</button>
@@ -1233,7 +1266,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
   <div id="calList"><div class="lsp"><div class="sp"></div><div class="lt3">Loading&#8230;</div></div></div>
   <div style="padding:12px 20px">
     <div style="background:var(--al);border:1.5px solid var(--amber);border-radius:14px;padding:14px 16px;font-size:13px;font-weight:600;color:#92400e;line-height:1.5">
-      <strong>&#128161; Calendar sharing tip:</strong> For Matt and Katharine to see each other's events &#8212; in Google Calendar go to Settings &#8594; click a calendar name &#8594; Share with specific people &#8594; add each other's Gmail &#8594; set permission to "Make changes and manage sharing". The app will show both calendars automatically.
+      <strong>&#128161; Family calendar tip:</strong> All family events are shared in real time across every device. Toggle a calendar on or off here to show or hide events from that calendar in your views.
     </div>
   </div>
   <div style="height:20px"></div>
@@ -1439,124 +1472,47 @@ var MC   = {Matt:'#38bdf8',Katharine:'#ff6b8a',Maggie:'#c084fc',Joe:'#34d399',Lo
 var ME   = {Matt:'👨',Katharine:'👩',Maggie:'👧',Joe:'👦',Louis:'🧒'};
 var MG   = {Matt:'linear-gradient(135deg,#38bdf8,#0ea5e9)',Katharine:'linear-gradient(135deg,#ff6b8a,#f43f5e)',Maggie:'linear-gradient(135deg,#c084fc,#a855f7)',Joe:'linear-gradient(135deg,#34d399,#10b981)',Louis:'linear-gradient(135deg,#fb923c,#f97316)'};
 
+// ─── FIREBASE & FAMILY CALENDARS ──────────────────────────────────────────────
+var _db = null;
+var _unsubEvents = null;
+var _unsubLists  = null;
+
+var FAMILY_CALS = [
+  {id:'family',   summary:'Family Calendar',  backgroundColor:'#6c63ff', accessRole:'owner'},
+  {id:'matt',     summary:'Matt',             backgroundColor:'#38bdf8', accessRole:'owner'},
+  {id:'katharine',summary:'Katharine',        backgroundColor:'#ff6b8a', accessRole:'owner'},
+  {id:'kids',     summary:'Kids Activities',  backgroundColor:'#34d399', accessRole:'writer'}
+];
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) {
+  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
     document.getElementById('setupWarn').style.display = 'block';
-    var b = document.getElementById('signInBtn');
-    b.disabled = true;
-    b.textContent = 'Client ID not set — see setup instructions above';
   }
   setDate();
   document.getElementById('eDate').value = new Date().toISOString().split('T')[0];
-  // On mobile, check if we just returned from a Google OAuth redirect with a token in the URL
-  if (checkOAuthRedirect()) return;
-  // Try to restore previous session silently (runs after GIS script loads)
-  setTimeout(tryAutoSignIn, 500);
+  tryAutoSignIn();
 });
 
-// ─── GOOGLE OAUTH ─────────────────────────────────────────────────────────────
-var _tc = null;
-var _silentRefresh = false;
-var _isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-// ── Mobile OAuth redirect flow ───────────────────────────────────────────────
-// iOS Chrome cannot reliably open OAuth popups — GIS's popup-based token model
-// causes redirect loops. Instead, on mobile we do a plain OAuth redirect and
-// read the token back from the URL hash when the page reloads after Google auth.
-function checkOAuthRedirect() {
-  if (!window.location.hash) return false;
-  var params = new URLSearchParams(window.location.hash.substring(1));
-  var token = params.get('access_token');
-  // Clean the hash immediately so a page refresh doesn't re-process it
-  history.replaceState(null, '', window.location.pathname + window.location.search);
-  if (!token) return false;
-  S.token = token;
-  // When token expires on mobile, sign out cleanly (no background refresh)
-  var exp = parseInt(params.get('expires_in') || '3600', 10);
-  setTimeout(function() {
-    if (S.token) { doSignOut(); t('Session expired — tap Sign in to continue', true); }
-  }, exp * 1000);
-  // Fetch profile and enter the app
-  gf('https://www.googleapis.com/oauth2/v3/userinfo').then(function(u) {
-    S.user = u; updateProfile();
-    try { localStorage.setItem('sw_user', JSON.stringify({email:u.email,name:u.name,picture:u.picture})); } catch(e) {}
-  }).catch(function(){});
-  showMainApp();
-  loadCals().then(function() { return doSync(); }).then(function() { t('Connected to Google Calendar!'); });
-  return true;
-}
-function getTC() {
-  if (_tc) return _tc;
-  if (typeof google === 'undefined') return null;
-  _tc = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: GCAL_SCOPE,
-    callback: onToken,
-    error_callback: function(e) {
-      var wasSilent = _silentRefresh;
-      _silentRefresh = false;
-      if (wasSilent) return; // silent background refresh failed — ignore quietly
-      t('Sign-in error: ' + (e.message || e.type), true);
-      resetBtn();
-    }
-  });
-  return _tc;
-}
-
-// Pre-initialise TC as soon as GIS loads so doSignIn() can call it synchronously
-// (required for iOS Safari — any async delay breaks the OAuth popup gesture context)
-window.onGoogleLibraryLoad = function() { getTC(); };
-
-function doSignIn() {
-  if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) { t('Set your Client ID first', true); return; }
-  if (_isMobile) {
-    // Mobile: use a plain OAuth redirect instead of GIS popups.
-    // Google redirects back here with #access_token=... which checkOAuthRedirect() handles.
-    var uri = window.location.origin + window.location.pathname;
-    window.location.href = 'https://accounts.google.com/o/oauth2/auth?' +
-      'client_id=' + encodeURIComponent(GOOGLE_CLIENT_ID) +
-      '&redirect_uri=' + encodeURIComponent(uri) +
-      '&response_type=token' +
-      '&scope=' + encodeURIComponent(GCAL_SCOPE) +
-      '&include_granted_scopes=true';
-    return;
-  }
-  // Desktop: use GIS popup flow
-  var tc = getTC();
-  if (!tc) { t('Google Sign-In still loading — please try again', true); return; }
-  var b = document.getElementById('signInBtn');
-  b.disabled = true; b.textContent = 'Connecting to Google…';
-  tc.requestAccessToken();
-}
-
-function resetBtn() {
-  var b = document.getElementById('signInBtn'); if (!b) return;
-  b.disabled = false;
-  b.innerHTML = '<svg width="22" height="22" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg> Sign in with Google';
-}
-
-function onToken(r) {
-  var wasRefresh = _silentRefresh;
-  _silentRefresh = false;
-  if (r.error) {
-    if (!wasRefresh) { t('Sign-in failed: ' + r.error, true); resetBtn(); }
-    return;
-  }
-  S.token = r.access_token;
-  // Only schedule background token refresh on desktop — mobile uses button-tap re-auth
-  if (!_isMobile) {
-    setTimeout(silentTokenRefresh, ((r.expires_in || 3600) - 120) * 1000);
-  }
-  if (wasRefresh) return; // token quietly updated — no UI changes needed
-  // First sign-in: fetch profile, show app, load calendars
-  gf('https://www.googleapis.com/oauth2/v3/userinfo').then(function(u) {
-    S.user = u;
+function tryAutoSignIn() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('sw_user') || 'null'); } catch(e) {}
+  if (stored && stored.name) {
+    S.user = stored;
+    showMainApp();
     updateProfile();
-    try { localStorage.setItem('sw_user', JSON.stringify({email:u.email,name:u.name,picture:u.picture})); } catch(e) {}
-  }).catch(function(){});
+    initFirestore();
+  }
+}
+
+function doSignIn(memberName) {
+  var emoji = ME[memberName] || '👤';
+  var color = MC[memberName] || '#6c63ff';
+  S.user = {name: memberName, emoji: emoji, color: color};
+  try { localStorage.setItem('sw_user', JSON.stringify(S.user)); } catch(e) {}
   showMainApp();
-  loadCals().then(function() { return doSync(); }).then(function() { t('Connected to Google Calendar!'); });
+  updateProfile();
+  initFirestore();
 }
 
 function showMainApp() {
@@ -1564,46 +1520,68 @@ function showMainApp() {
   document.getElementById('mainApp').style.display = 'flex';
 }
 
-// Silent token refresh — desktop only; mobile uses button-tap re-auth to avoid redirect loops
-function silentTokenRefresh() {
-  if (_isMobile) return;
-  var tc = getTC();
-  if (!tc) return;
-  _silentRefresh = true;
-  tc.requestAccessToken({prompt: 'none'});
-}
-
-// Try to restore session on app load
-function tryAutoSignIn() {
-  if (GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== -1) return;
-  var stored = null;
-  try { stored = JSON.parse(localStorage.getItem('sw_user') || 'null'); } catch(e) {}
-  if (!stored) return;
-
-  // Always restore the stored profile for display
-  S.user = stored;
-  updateProfile();
-
-  if (_isMobile) {
-    // Mobile: never auto-trigger OAuth — it causes a redirect loop on iOS Chrome/Safari.
-    // Personalise the sign-in button so returning users know they just need to tap.
-    var firstName = (stored.name || '').split(' ')[0] || stored.email || '';
-    var btn = document.getElementById('signInBtn');
-    if (btn && firstName) btn.innerHTML = btn.innerHTML.replace('Sign in with Google', 'Continue as ' + firstName);
+function initFirestore() {
+  if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
+    // Firebase not configured — use demo data so the app is still usable
+    loadDemoEvents();
+    loadCals();
+    t('Firebase not set up — showing demo data');
     return;
   }
-
-  // Desktop: silent token refresh using the existing Google browser session
-  var btn2 = document.getElementById('signInBtn');
-  if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ Signing in…'; }
-  var tc = getTC();
-  if (tc) {
-    _silentRefresh = true;
-    tc.requestAccessToken({prompt: 'none'});
-    setTimeout(function() {
-      if (!S.token) { _silentRefresh = false; resetBtn(); }
-    }, 4000);
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.firestore();
+    loadCals();
+    subscribeEvents();
+    subscribeLists();
+  } catch(e) {
+    t('Firebase error: ' + e.message, true);
+    loadDemoEvents();
+    loadCals();
   }
+}
+
+function subscribeEvents() {
+  if (_unsubEvents) { _unsubEvents(); _unsubEvents = null; }
+  if (!_db) return;
+  var sb = document.getElementById('syncBtn');
+  if (sb) sb.style.animation = 'spin .8s linear infinite';
+  _unsubEvents = _db.collection('families').doc(FAMILY_CODE).collection('events')
+    .onSnapshot(function(snap) {
+      S.events = [];
+      snap.forEach(function(doc) {
+        S.events.push(Object.assign({id: doc.id}, doc.data()));
+      });
+      S.events.sort(function(a, b) {
+        var ta = (a.start && (a.start.dateTime || a.start.date)) || '';
+        var tb = (b.start && (b.start.dateTime || b.start.date)) || '';
+        return ta < tb ? -1 : ta > tb ? 1 : 0;
+      });
+      if (sb) sb.style.animation = '';
+      document.getElementById('lastSync').textContent = 'Live — ' + S.events.length + ' events';
+      renderViews();
+    }, function(err) {
+      if (sb) sb.style.animation = '';
+      t('Sync error: ' + err.message, true);
+    });
+}
+
+function subscribeLists() {
+  if (_unsubLists) { _unsubLists(); _unsubLists = null; }
+  if (!_db) return;
+  _unsubLists = _db.collection('families').doc(FAMILY_CODE).collection('lists')
+    .orderBy('order')
+    .onSnapshot(function(snap) {
+      if (snap.empty) return; // keep local defaults if nothing in Firestore yet
+      _lists = [];
+      snap.forEach(function(doc) {
+        _lists.push(Object.assign({id: doc.id}, doc.data()));
+      });
+      renderShop();
+      renderListsScreen();
+    }, function(err) {
+      console.warn('Lists sync error:', err.message);
+    });
 }
 
 function doDemo() {
@@ -1612,76 +1590,43 @@ function doDemo() {
   document.getElementById('mainApp').style.display = 'flex';
   document.getElementById('demoBanner').style.display = 'flex';
   loadDemoEvents();
-  t('Demo mode — sign in to sync real calendars');
+  loadCals();
+  t('Demo mode — tap a family member to use the real calendar');
 }
 
 function doSignOut() {
-  if (S.token && typeof google !== 'undefined') google.accounts.oauth2.revoke(S.token, function(){});
-  S.token = null; S.user = null; S.cals = []; S.events = []; S.isDemo = false;
+  if (_unsubEvents) { _unsubEvents(); _unsubEvents = null; }
+  if (_unsubLists)  { _unsubLists();  _unsubLists  = null; }
+  S.user = null; S.cals = []; S.events = []; S.isDemo = false; _db = null;
   try { localStorage.removeItem('sw_user'); } catch(e) {}
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('authScreen').style.display = 'flex';
-  resetBtn();
 }
 
 function updateProfile() {
   var u = S.user; if (!u) return;
-  document.getElementById('pName').textContent  = u.name || u.email || 'Signed in';
-  document.getElementById('pEmail').textContent = u.email || '';
-  document.getElementById('pBadge').innerHTML   = '<span class="badge">&#10003; Google Calendar connected</span>';
-  document.getElementById('pEmoji').textContent  = '👨';
-  document.getElementById('mattBadge').innerHTML = '<span class="badge">&#10003; Google Calendar linked</span>';
-}
-
-// ─── API FETCH HELPER ─────────────────────────────────────────────────────────
-function gf(url, opts) {
-  opts = opts || {};
-  if (!S.token) return Promise.reject(new Error('Not authenticated'));
-  var hdrs = {'Authorization': 'Bearer ' + S.token, 'Content-Type': 'application/json'};
-  Object.assign(hdrs, opts.headers || {});
-  return fetch(url, Object.assign({}, opts, {headers: hdrs})).then(function(res) {
-    if (res.status === 401) {
-      S.token = null;
-      if (_isMobile) {
-        // On mobile, calling requestAccessToken here causes a redirect loop.
-        // Sign the user out cleanly and let them tap the button to re-authenticate.
-        doSignOut();
-        t('Session expired — please sign in again', true);
-      } else {
-        t('Session expired — re-authorising…');
-        var tc = getTC(); if (tc) { _silentRefresh = true; tc.requestAccessToken({prompt: 'none'}); }
-      }
-      throw new Error('Token expired');
-    }
-    if (!res.ok) {
-      return res.json().catch(function(){ return {}; }).then(function(e) {
-        throw new Error((e.error && e.error.message) || 'API error ' + res.status);
-      });
-    }
-    if (res.status === 204) return null;
-    return res.json();
-  });
+  var emoji = u.emoji || ME[u.name] || '👤';
+  var synced = _db ? '&#10003; Live family calendar' : '&#9888; Firebase not connected';
+  document.getElementById('pName').textContent  = u.name || 'Family member';
+  document.getElementById('pEmail').textContent = _db ? 'Connected to Szearl World' : 'Demo mode';
+  document.getElementById('pBadge').innerHTML   = '<span class="badge">' + synced + '</span>';
+  document.getElementById('pEmoji').textContent  = emoji;
+  var mb = document.getElementById('mattBadge');
+  if (mb) mb.innerHTML = u.name === 'Matt' ? '<span class="badge">&#10003; Signed in</span>' : '';
 }
 
 // ─── LOAD CALENDARS ───────────────────────────────────────────────────────────
-// GET /users/me/calendarList — lists all calendars the user has access to,
-// including shared calendars from family members.
-// Docs: https://developers.google.com/calendar/api/v3/reference/calendarList/list
 function loadCals() {
-  return gf(GCAL_API + '/users/me/calendarList?maxResults=50').then(function(d) {
-    S.cals = d.items || [];
-    S.visCals = S.cals.map(function(c) { return c.id; });
-    // Populate the calendar dropdown in the Add Event form
-    // Only shows calendars where the user can write events
-    var sel = document.getElementById('eCal');
-    if (sel) sel.innerHTML = S.cals
-      .filter(function(c) { return c.accessRole === 'owner' || c.accessRole === 'writer'; })
-      .map(function(c) { return '<option value="' + h(c.id) + '">' + h(c.summary) + '</option>'; })
-      .join('');
-    document.getElementById('calSub').textContent = S.cals.length + ' calendar' + (S.cals.length === 1 ? '' : 's') + ' connected';
-    if (S.user) document.getElementById('calAccLbl').textContent = 'Signed in as ' + S.user.email;
-    renderCalList();
-  }).catch(function(e) { t('Could not load calendars: ' + e.message, true); });
+  S.cals = FAMILY_CALS;
+  S.visCals = S.cals.map(function(c) { return c.id; });
+  var sel = document.getElementById('eCal');
+  if (sel) sel.innerHTML = S.cals.map(function(c) {
+    return '<option value="' + h(c.id) + '">' + h(c.summary) + '</option>';
+  }).join('');
+  document.getElementById('calSub').textContent = S.cals.length + ' family calendars';
+  if (S.user) { var lbl = document.getElementById('calAccLbl'); if (lbl) lbl.textContent = 'Signed in as ' + S.user.name; }
+  renderCalList();
+  return Promise.resolve();
 }
 
 function renderCalList() {
@@ -1706,59 +1651,21 @@ function togCal(i, btn) {
   renderViews();
 }
 
-// ─── SYNC EVENTS ─────────────────────────────────────────────────────────────
-// Fetches events from all visible calendars for the next 3 months.
-// GET /calendars/{calendarId}/events
-// Docs: https://developers.google.com/calendar/api/v3/reference/events/list
+// ─── SYNC / REFRESH ───────────────────────────────────────────────────────────
 function doSync() {
   if (S.isDemo) { loadDemoEvents(); return Promise.resolve(); }
-  if (!S.token) return Promise.resolve();
-  var sb = document.getElementById('syncBtn');
-  if (sb) sb.style.animation = 'spin .8s linear infinite';
-  var now = new Date();
-  var timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  var timeMax = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString();
-  S.events = [];
-  var ids = S.visCals.length ? S.visCals : S.cals.map(function(c) { return c.id; });
-  var promises = ids.map(function(calId) {
-    var p = new URLSearchParams({timeMin:timeMin, timeMax:timeMax, singleEvents:'true', orderBy:'startTime', maxResults:'250'});
-    return gf(GCAL_API + '/calendars/' + encodeURIComponent(calId) + '/events?' + p).then(function(data) {
-      var cal = null;
-      for (var i = 0; i < S.cals.length; i++) { if (S.cals[i].id === calId) { cal = S.cals[i]; break; } }
-      (data.items || []).forEach(function(ev) {
-        S.events.push(Object.assign({}, ev, {
-          _calId:    calId,
-          _calName:  cal ? cal.summary : calId,
-          _calColor: cal ? (cal.backgroundColor || '#6c63ff') : '#6c63ff'
-        }));
-      });
-    }).catch(function(e) { console.warn('Failed fetching', calId, e.message); });
-  });
-  function allSettled(arr) {
-    return Promise.all(arr.map(function(p) { return p.then(function(v) { return {s:'f',v:v}; }).catch(function(e) { return {s:'r',e:e}; }); }));
-  }
-  return allSettled(promises).then(function() {
-    S.events.sort(function(a, b) {
-      var ta = (a.start && (a.start.dateTime || a.start.date)) || '';
-      var tb = (b.start && (b.start.dateTime || b.start.date)) || '';
-      return ta < tb ? -1 : ta > tb ? 1 : 0;
-    });
-    if (sb) sb.style.animation = '';
-    document.getElementById('lastSync').textContent = 'Last synced: ' + fmtT(new Date());
-    renderViews();
-    t('Synced — ' + S.events.length + ' events');
-  });
+  if (_db) { subscribeEvents(); } // re-attach listener (no-op if already live)
+  return Promise.resolve();
 }
 
-// ─── CREATE EVENT ─────────────────────────────────────────────────────────────
-// POST /calendars/{calendarId}/events
-// Docs: https://developers.google.com/calendar/api/v3/reference/events/insert
+// ─── SAVE EVENT ───────────────────────────────────────────────────────────────
 function saveEv() {
   var title = document.getElementById('eTitle').value.trim();
   var date  = document.getElementById('eDate').value;
   if (!title) { t('Enter an event title', true); return; }
   if (!date)  { t('Pick a date', true); return; }
-  if (S.isDemo) { t('Demo mode — sign in to save to Google Calendar'); closeM('mAdd'); return; }
+  if (S.isDemo) { t('Demo mode — tap a family member on the home screen to sign in'); closeM('mAdd'); return; }
+  if (!_db) { t('Not connected to Firebase — check setup', true); return; }
   var btn = document.getElementById('saveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   var allDay = document.getElementById('tgAD').classList.contains('on');
@@ -1766,8 +1673,8 @@ function saveEv() {
   var tEnd   = document.getElementById('eEndTime').value;
   var loc    = document.getElementById('eLoc').value.trim();
   var notes  = document.getElementById('eNotes').value.trim();
-  var calId  = document.getElementById('eCal').value || 'primary';
-  var _recurEl=document.getElementById('eRecur'); var recur=_recurEl?_recurEl.value:'';
+  var calId  = document.getElementById('eCal').value || 'family';
+  var _recurEl = document.getElementById('eRecur'); var recur = _recurEl ? _recurEl.value : '';
   var catEl  = document.querySelector('.cc.on');
   var cat    = catEl ? catEl.textContent.trim() : '';
   var members = [].slice.call(document.querySelectorAll('.msc.on')).map(function(el) { return el.dataset.m; }).filter(Boolean);
@@ -1775,52 +1682,72 @@ function saveEv() {
   if (cat)            descParts.push('Category: ' + cat);
   if (members.length) descParts.push('Members: ' + members.join(', '));
   if (notes)          descParts.push(notes);
-  var tz   = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  var body = {summary: title, description: descParts.join('\n')};
-  if (loc) body.location = loc;
+  var cal = null;
+  for (var i = 0; i < FAMILY_CALS.length; i++) { if (FAMILY_CALS[i].id === calId) { cal = FAMILY_CALS[i]; break; } }
+  var ev = {
+    summary: title,
+    description: descParts.join('\n'),
+    _calId:    calId,
+    _calName:  cal ? cal.summary : calId,
+    _calColor: cal ? cal.backgroundColor : '#6c63ff',
+    createdBy: S.user ? S.user.name : 'Unknown',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (loc) ev.location = loc;
   if (allDay) {
-    body.start = {date: date};
-    body.end   = {date: date};
+    ev.start = {date: date};
+    ev.end   = {date: date};
   } else {
     var s = tStart ? date + 'T' + tStart + ':00' : date + 'T09:00:00';
     var e = tEnd   ? date + 'T' + tEnd   + ':00' : new Date(new Date(s).getTime() + 3600000).toISOString().slice(0, 19);
-    body.start = {dateTime: s, timeZone: tz};
-    body.end   = {dateTime: e, timeZone: tz};
+    ev.start = {dateTime: s};
+    ev.end   = {dateTime: e};
   }
-  if (recur) body.recurrence = [recur];
-  // POST the new event to Google Calendar
-  gf(GCAL_API + '/calendars/' + encodeURIComponent(calId) + '/events', {method: 'POST', body: JSON.stringify(body)})
-    .then(function() { closeM('mAdd'); t('Saved to Google Calendar!'); return doSync(); })
+  if (recur) ev.recurrence = [recur];
+  var col = _db.collection('families').doc(FAMILY_CODE).collection('events');
+  var promise = S.curId ? col.doc(S.curId).set(ev) : col.add(ev);
+  promise
+    .then(function() { closeM('mAdd'); t('Event saved!'); })
     .catch(function(e) { t('Save failed: ' + e.message, true); })
-    .then(function() { btn.disabled = false; btn.textContent = 'Save to Google Calendar →'; });
+    .finally(function() { btn.disabled = false; btn.textContent = 'Save Event →'; });
 }
 
 // ─── DELETE EVENT ─────────────────────────────────────────────────────────────
-// DELETE /calendars/{calendarId}/events/{eventId}
-// Docs: https://developers.google.com/calendar/api/v3/reference/events/delete
 function delEv() {
-  if (!S.curId || !S.curCalId) return;
-  if (!confirm('Delete this event from Google Calendar?')) return;
-  gf(GCAL_API + '/calendars/' + encodeURIComponent(S.curCalId) + '/events/' + encodeURIComponent(S.curId), {method: 'DELETE'})
-    .then(function() { closeM('mDetail'); t('Event deleted'); return doSync(); })
+  if (!S.curId) return;
+  if (!confirm('Delete this event?')) return;
+  if (!_db) { t('Not connected', true); return; }
+  _db.collection('families').doc(FAMILY_CODE).collection('events').doc(S.curId)
+    .delete()
+    .then(function() { closeM('mDetail'); t('Event deleted'); })
     .catch(function(e) { t('Could not delete: ' + e.message, true); });
 }
 
-// ─── EDIT EVENT ──────────────────────────────────────────────────────────────
-// Opens the Google Calendar web app for editing (full in-app edit is v2)
+// ─── EDIT EVENT ───────────────────────────────────────────────────────────────
 function editEv() {
   if (!S.curId) return;
-  window.open('https://calendar.google.com/calendar/r/eventedit/' + S.curId, '_blank');
+  // Open the add-event form pre-filled with this event's data
+  var ev = S.events.find(function(e) { return e.id === S.curId; });
+  if (!ev) return;
   closeM('mDetail');
+  openM('mAdd');
+  document.getElementById('eTitle').value = ev.summary || '';
+  if (ev.start && ev.start.dateTime) {
+    document.getElementById('eDate').value = ev.start.dateTime.slice(0, 10);
+    document.getElementById('eTime').value = ev.start.dateTime.slice(11, 16);
+  } else if (ev.start && ev.start.date) {
+    document.getElementById('eDate').value = ev.start.date;
+  }
+  if (ev.end && ev.end.dateTime) document.getElementById('eEndTime').value = ev.end.dateTime.slice(11, 16);
+  var locEl = document.getElementById('eLoc'); if (locEl) locEl.value = ev.location || '';
+  var selCal = document.getElementById('eCal'); if (selCal && ev._calId) selCal.value = ev._calId;
+  // Keep S.curId so saveEv() knows to update rather than insert
+  document.getElementById('saveBtn').textContent = 'Update Event →';
 }
 
 // ─── DEMO EVENTS ─────────────────────────────────────────────────────────────
 function loadDemoEvents() {
-  S.cals = [
-    {id:'family', summary:'Family Calendar',  backgroundColor:'#6c63ff', accessRole:'owner'},
-    {id:'matt',   summary:'Matt',             backgroundColor:'#38bdf8', accessRole:'owner'},
-    {id:'kids',   summary:'Kids Activities',  backgroundColor:'#34d399', accessRole:'writer'}
-  ];
+  S.cals = FAMILY_CALS;
   S.visCals = S.cals.map(function(c) { return c.id; });
   var now = new Date();
   function ts(h, m, dOff) { var d=new Date(now); d.setDate(d.getDate()+(dOff||0)); return d.toISOString().slice(0,10)+'T'+['0'+h].join(''). slice(-2)+':'+['0'+m].join(''). slice(-2)+':00'; }
@@ -1837,10 +1764,6 @@ function loadDemoEvents() {
     {id:'d7', summary:'Maggie\'s Birthday Party',  description:'Category: Birthday\nMembers: Maggie',          location:'Kids Zone',               start:{dateTime:tss(14,0,6)},  end:{dateTime:tss(17,0,6)},  _calId:'family', _calName:'Family Calendar',  _calColor:'#6c63ff'},
     {id:'d8', summary:'Family Trip to Rottnest',   description:'Category: Travel',                               start:{date:ds(8)},                 end:{date:ds(10)},             _calId:'family', _calName:'Family Calendar',  _calColor:'#6c63ff'}
   ];
-  var sel = document.getElementById('eCal');
-  if (sel) sel.innerHTML = S.cals.map(function(c) { return '<option value="' + c.id + '">' + c.summary + '</option>'; }).join('');
-  document.getElementById('calSub').textContent = '3 demo calendars';
-  renderCalList();
   renderViews();
 }
 
@@ -3404,60 +3327,25 @@ openAdd = function(preset) {
   if (eRecur) eRecur.value = '';
 };
 
-// ── Patch saveEv to use new recurrence select ────────────────────────────────
-var _origSaveEv = saveEv;
-saveEv = function() {
-  // Temporarily patch the RRULE reading from the new select
-  var eRecur = document.getElementById('eRecur');
-  // Fully redefines saveEv — reads from eRecur select, uses _selectedCatId
-  // behaviour here
-  var title = document.getElementById('eTitle').value.trim();
-  var date  = document.getElementById('eDate').value;
-  if (!title) { t('Enter an event title', true); return; }
-  if (!date)  { t('Pick a date', true); return; }
-  if (S.isDemo) { t('Demo mode — sign in to save to Google Calendar'); closeM('mAdd'); return; }
-
-  var btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-
-  var allDay  = document.getElementById('tgAD').classList.contains('on');
-  var tStart  = document.getElementById('eTime').value;
-  var tEnd    = document.getElementById('eEndTime').value;
-  var loc     = document.getElementById('eLoc').value.trim();
-  var notes   = document.getElementById('eNotes').value.trim();
-  var calId   = document.getElementById('eCal').value || 'primary';
-  var recurVal= eRecur ? eRecur.value : '';
-
-  // Build description with category + members
-  var cat = _selectedCatId ? catById(_selectedCatId) : null;
-  var catName = cat ? cat.name : '';
-  var members = [].slice.call(document.querySelectorAll('#mAdd .msc.on'))
-    .map(function(el) { return el.dataset.m; }).filter(Boolean);
-  var descParts = [];
-  if (catName)      descParts.push('Category: ' + catName);
-  if (members.length) descParts.push('Members: ' + members.join(', '));
-  if (notes)        descParts.push(notes);
-
-  var tz   = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  var body = {summary: title, description: descParts.join('\n')};
-  if (loc) body.location = loc;
-
-  if (allDay) {
-    body.start = {date: date};
-    body.end   = {date: date};
-  } else {
-    var s = tStart ? date + 'T' + tStart + ':00' : date + 'T09:00:00';
-    var e = tEnd   ? date + 'T' + tEnd   + ':00' : new Date(new Date(s).getTime() + 3600000).toISOString().slice(0, 19);
-    body.start = {dateTime: s, timeZone: tz};
-    body.end   = {dateTime: e, timeZone: tz};
-  }
-  if (recurVal) body.recurrence = [recurVal];
-
-  gf(GCAL_API + '/calendars/' + encodeURIComponent(calId) + '/events', {method: 'POST', body: JSON.stringify(body)})
-    .then(function() { closeM('mAdd'); t('Saved to Google Calendar!'); return doSync(); })
-    .catch(function(e) { t('Save failed: ' + e.message, true); })
-    .then(function() { btn.disabled = false; btn.textContent = 'Save to Google Calendar \u2192'; });
-};
+// ── Extend saveEv: read _selectedCatId from category picker ─────────────────
+(function() {
+  var _base = saveEv;
+  saveEv = function() {
+    var fakeCat = null;
+    if (typeof _selectedCatId !== 'undefined' && _selectedCatId && !document.querySelector('.cc.on')) {
+      var cat = typeof catById === 'function' ? catById(_selectedCatId) : null;
+      if (cat) {
+        fakeCat = document.createElement('div');
+        fakeCat.className = 'cc on';
+        fakeCat.textContent = cat.name;
+        fakeCat.style.display = 'none';
+        document.body.appendChild(fakeCat);
+      }
+    }
+    _base();
+    if (fakeCat && fakeCat.parentNode) fakeCat.parentNode.removeChild(fakeCat);
+  };
+})();
 
 
 // ── evStart: get Date from event start (used by KB and week modal) ──────────
@@ -3998,6 +3886,14 @@ function loadLists() {
 
 function saveLists() {
   try { localStorage.setItem(LISTS_KEY, JSON.stringify(_lists)); } catch(e) {}
+  // Also sync to Firestore so all family devices stay in sync
+  if (!_db) return;
+  var batch = _db.batch();
+  var col = _db.collection('families').doc(FAMILY_CODE).collection('lists');
+  _lists.forEach(function(list, i) {
+    batch.set(col.doc(list.id), Object.assign({}, list, {order: i}));
+  });
+  batch.commit().catch(function(e) { console.warn('Lists sync error:', e.message); });
 }
 
 function getList(id) {
@@ -4235,7 +4131,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ─── SERVICE WORKER (PWA offline support) ────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  var sw = 'const C="szearl-v1";self.addEventListener("install",e=>self.skipWaiting());self.addEventListener("activate",e=>e.waitUntil(clients.claim()));self.addEventListener("fetch",e=>{if(!e.request.url.startsWith("http"))return;if(e.request.url.includes("googleapis.com")||e.request.url.includes("accounts.google.com"))return;e.respondWith(caches.open(C).then(cache=>fetch(e.request).then(r=>{cache.put(e.request,r.clone());return r;}).catch(()=>caches.match(e.request))));})';
+  var sw = 'const C="szearl-v2";self.addEventListener("install",e=>self.skipWaiting());self.addEventListener("activate",e=>e.waitUntil(clients.claim()));self.addEventListener("fetch",e=>{if(!e.request.url.startsWith("http"))return;if(e.request.url.includes("firestore.googleapis.com")||e.request.url.includes("firebase")||e.request.url.includes("gstatic.com"))return;e.respondWith(caches.open(C).then(cache=>fetch(e.request).then(r=>{cache.put(e.request,r.clone());return r;}).catch(()=>caches.match(e.request))));})';
   var blob = new Blob([sw], {type: 'application/javascript'});
   navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(){});
 }
@@ -4793,20 +4689,21 @@ function saSave(){
   var desc2=[];
   if(form.cat)desc2.push('Category: '+form.cat);if(form.mem)desc2.push('Members: '+form.mem);
   if(form.notes)desc2.push(form.notes);if(form.bring.length)desc2.push('Bring: '+form.bring.join(', '));
-  var body={summary:form.title,description:desc2.join('\n'),start:{dateTime:s2,timeZone:tz},end:{dateTime:e2,timeZone:tz}};
+  var body={summary:form.title,description:desc2.join('\n'),start:{dateTime:s2},end:{dateTime:e2},_calId:'family',_calName:'Family Calendar',_calColor:'#6c63ff',createdBy:S.user?S.user.name:'Unknown',updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(form.loc)body.location=form.loc;
   var rrm={Daily:'RRULE:FREQ=DAILY',Weekly:'RRULE:FREQ=WEEKLY',Fortnightly:'RRULE:FREQ=WEEKLY;INTERVAL=2',Monthly:'RRULE:FREQ=MONTHLY'};
   if(rrm[form.rpt])body.recurrence=[rrm[form.rpt]];
-  gf(GCAL_API+'/calendars/primary/events',{method:'POST',body:JSON.stringify(body)})
-    .then(function(ev){
-      // If Kids Board toggled and there are items to bring, save them as checklist
-      if(form.kids && form.bring && form.bring.length && ev && ev.id) {
+  if (!_db) { t('Not connected to Firebase — check setup', true); return; }
+  var col = _db.collection('families').doc(FAMILY_CODE).collection('events');
+  col.add(body)
+    .then(function(docRef){
+      if(form.kids && form.bring && form.bring.length) {
         var cl = form.bring.map(function(item,i){
           return {id:'sa_item_'+Date.now()+'_'+i, label:item, done:false};
         });
-        saveChecklist(ev.id, cl);
+        saveChecklist(docRef.id, cl);
       }
-      doSync();saShowSaved(form);
+      saShowSaved(form);
     })
     .catch(function(err){t('Save failed: '+err.message,true);});
 }
