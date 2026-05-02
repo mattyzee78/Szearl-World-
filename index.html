@@ -798,26 +798,14 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
     &#9888; <strong>Setup needed:</strong> Open this file in a text editor, find <code>FIREBASE_CONFIG</code> and replace with your Firebase project config. Full setup instructions are in the comment block at the top of this file.
   </div>
   <p style="font-size:17px;font-weight:800;color:var(--tx)">Who are you?</p>
-  <div class="fp-grid">
-    <div class="fpc" onclick="doSignIn('Matt')">
+  <div style="display:flex;gap:16px;justify-content:center">
+    <div class="fpc" onclick="doSignIn('Matt')" style="min-width:120px">
       <div class="fpa" style="background:linear-gradient(135deg,#38bdf8,#0ea5e9)">&#128104;</div>
       <div class="fpn">Matt</div>
     </div>
-    <div class="fpc" onclick="doSignIn('Katharine')">
+    <div class="fpc" onclick="doSignIn('Katharine')" style="min-width:120px">
       <div class="fpa" style="background:linear-gradient(135deg,#ff6b8a,#f43f5e)">&#128105;</div>
       <div class="fpn">Katharine</div>
-    </div>
-    <div class="fpc" onclick="doSignIn('Maggie')">
-      <div class="fpa" style="background:linear-gradient(135deg,#c084fc,#a855f7)">&#128103;</div>
-      <div class="fpn">Maggie</div>
-    </div>
-    <div class="fpc" onclick="doSignIn('Joe')">
-      <div class="fpa" style="background:linear-gradient(135deg,#34d399,#10b981)">&#128102;</div>
-      <div class="fpn">Joe</div>
-    </div>
-    <div class="fpc" onclick="doSignIn('Louis')">
-      <div class="fpa" style="background:linear-gradient(135deg,#fb923c,#f97316)">&#129490;</div>
-      <div class="fpn">Louis</div>
     </div>
   </div>
   <span class="sk" onclick="doDemo()">Continue in demo mode &#8594;</span>
