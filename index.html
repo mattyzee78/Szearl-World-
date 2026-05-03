@@ -1101,7 +1101,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
   <div class="mi" onclick="openCatManager()"><div class="mii" style="background:#fef3d8">&#127758;</div><div class="mib"><div class="mil">Manage categories</div><div class="mis" id="catMgrSub">12 categories</div></div><div class="mia">&#8250;</div></div>
   <div class="mi" onclick="goTab('family')"><div class="mii" style="background:var(--rl)">&#128106;</div><div class="mib"><div class="mil">Manage family members</div><div class="mis">Edit profiles, colours, avatars</div></div><div class="mia">&#8250;</div></div>
   <div class="mi" onclick="t('Theme settings coming soon')"><div class="mii" style="background:var(--lav)">&#127912;</div><div class="mib"><div class="mil">Theme &amp; colours</div><div class="mis">Personalise the look</div></div><div class="mia">&#8250;</div></div>
-  <div class="mi" id="miInstall" onclick="installApp()" style="display:none;background:linear-gradient(135deg,#ede9ff,#ffe4ea);border-radius:14px;margin:0 20px 8px;border:2px solid var(--brand)"><div class="mii" style="background:var(--bl)">&#128640;</div><div class="mib"><div class="mil" style="color:var(--brand)">Install App</div><div class="mis" style="color:var(--bd)">Add to home screen without browser icon</div></div><div class="mia" style="color:var(--brand);font-size:20px">&#8250;</div></div>
+  <div class="mi" id="miInstall" onclick="installApp()" style="background:linear-gradient(135deg,#ede9ff,#ffe4ea);border-radius:14px;margin:0 20px 8px;border:2px solid var(--brand)"><div class="mii" style="background:var(--bl)">&#128640;</div><div class="mib"><div class="mil" style="color:var(--brand)" id="miInstallTitle">Install App</div><div class="mis" style="color:var(--bd)" id="miInstallSub">Add to home screen without browser icon</div></div><div class="mia" style="color:var(--brand);font-size:20px">&#8250;</div></div>
   <div class="mi" onclick="t('Szearl World v1.0 &#183; Built for the Szearl family')"><div class="mii" style="background:var(--sf2)">&#8505;&#65039;</div><div class="mib"><div class="mil">About Szearl World</div><div class="mis">Version 1.0</div></div><div class="mia">&#8250;</div></div>
   <div class="spacer"></div><div class="spacer"></div>
 </div>
@@ -1419,6 +1419,37 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
 
 <!-- Hidden file input for gallery picker -->
 <input type="file" id="avatarFilePicker" accept="image/*" style="display:none" onchange="onFileChosen(event)">
+
+<!-- Install instructions modal -->
+<div id="mInstall" class="mo" onclick="closeM('mInstall')">
+<div class="ms" onclick="event.stopPropagation()" style="max-width:400px">
+  <div class="mhd"></div>
+  <div class="mt">Install Szearl World</div>
+  <p style="color:var(--t2);margin:12px 20px 0;font-size:15px">Follow these steps to install the app icon without the Chrome browser badge:</p>
+  <div style="margin:16px 20px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="background:var(--brand);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">1</div>
+      <div><strong>Delete the current shortcut</strong><br><span style="color:var(--t2);font-size:14px">Long-press the Szearl World icon on your home screen → Remove</span></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="background:var(--brand);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">2</div>
+      <div><strong>Clear Chrome site data</strong><br><span style="color:var(--t2);font-size:14px">In Chrome: tap ⋮ menu → Settings → Privacy → Clear browsing data → Advanced → check "Site settings" → Clear data</span></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="background:var(--brand);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">3</div>
+      <div><strong>Open the app URL in Chrome</strong><br><span style="color:var(--t2);font-size:14px">Navigate to the app, browse around for a few seconds</span></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="background:var(--brand);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">4</div>
+      <div><strong>Use the "Install App" button</strong><br><span style="color:var(--t2);font-size:14px">Come back to More → Install App. It will trigger Chrome's official install which has no browser badge.</span></div>
+    </div>
+  </div>
+  <div class="ma">
+    <button class="bp" onclick="closeM('mInstall')">Got it</button>
+  </div>
+  <div style="height:16px"></div>
+</div>
+</div>
 
 <div class="toast" id="toastEl"></div>
 
@@ -4172,21 +4203,24 @@ var _installPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _installPrompt = e;
-  var btn = document.getElementById('miInstall');
-  if (btn) btn.style.display = 'flex';
+  var sub = document.getElementById('miInstallSub');
+  if (sub) sub.textContent = 'Tap to install — no browser icon!';
 });
 window.addEventListener('appinstalled', function() {
   _installPrompt = null;
-  var btn = document.getElementById('miInstall');
-  if (btn) btn.style.display = 'none';
-  t('App installed! You can now open it from your home screen.');
+  var sub = document.getElementById('miInstallSub');
+  if (sub) sub.textContent = 'Already installed ✓';
+  t('App installed! Open it from your home screen.');
 });
 function installApp() {
-  if (!_installPrompt) { t('Use your browser menu → Add to Home Screen'); return; }
-  _installPrompt.prompt();
-  _installPrompt.userChoice.then(function(r) {
-    if (r.outcome === 'accepted') _installPrompt = null;
-  });
+  if (_installPrompt) {
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(function(r) {
+      if (r.outcome === 'accepted') _installPrompt = null;
+    });
+  } else {
+    openM('mInstall');
+  }
 }
 </script>
 
