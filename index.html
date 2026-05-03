@@ -111,41 +111,8 @@ const FIREBASE_CONFIG = {
 const FAMILY_CODE = 'szearl-family-2024';
 // ============================================================
 </script>
-<script>
-(function(){
-  // Generate a branded home-screen icon via canvas
-  var c = document.createElement('canvas');
-  c.width = c.height = 512;
-  var ctx = c.getContext('2d');
-  // Rounded rect background
-  var r = 110;
-  ctx.beginPath();
-  ctx.moveTo(r,0); ctx.arcTo(512,0,512,r,r); ctx.arcTo(512,512,512-r,512,r);
-  ctx.arcTo(0,512,0,512-r,r); ctx.arcTo(0,0,r,0,r); ctx.closePath();
-  var g = ctx.createLinearGradient(0,0,512,512);
-  g.addColorStop(0,'#6c63ff'); g.addColorStop(1,'#ff6b8a');
-  ctx.fillStyle = g; ctx.fill();
-  // Soft inner circle
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.beginPath(); ctx.arc(256,256,155,0,Math.PI*2); ctx.fill();
-  // "SW" letters
-  ctx.fillStyle = '#fff';
-  ctx.font = '900 196px "Arial Black",Arial,sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('SW',256,265);
-  var iconUrl = c.toDataURL('image/png');
-  // Apple touch icon for iOS home screen
-  var al = document.createElement('link');
-  al.rel = 'apple-touch-icon'; al.href = iconUrl;
-  document.currentScript.after(al);
-  // PWA manifest with icon
-  var m = {name:"Szearl World",short_name:"Szearl",start_url:"/",display:"standalone",background_color:"#6c63ff",theme_color:"#6c63ff",icons:[{src:iconUrl,sizes:"512x512",type:"image/png"}]};
-  var l = document.createElement('link');
-  l.rel = 'manifest';
-  l.href = URL.createObjectURL(new Blob([JSON.stringify(m)], {type:'application/json'}));
-  document.currentScript.after(l);
-})();
-</script>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
 :root {
   --brand:#6c63ff; --bl:#ede9ff; --bd:#4a43cc;
@@ -4196,9 +4163,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ─── SERVICE WORKER (PWA offline support) ────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  var sw = 'const C="szearl-v2";self.addEventListener("install",e=>self.skipWaiting());self.addEventListener("activate",e=>e.waitUntil(clients.claim()));self.addEventListener("fetch",e=>{if(!e.request.url.startsWith("http"))return;if(e.request.url.includes("firestore.googleapis.com")||e.request.url.includes("firebase")||e.request.url.includes("gstatic.com"))return;e.respondWith(caches.open(C).then(cache=>fetch(e.request).then(r=>{cache.put(e.request,r.clone());return r;}).catch(()=>caches.match(e.request))));})';
-  var blob = new Blob([sw], {type: 'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(){});
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
 }
 </script>
 
