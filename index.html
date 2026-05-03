@@ -2511,14 +2511,14 @@ var _mmName  = null;   // tracks current member modal for inline edit btn
 var AV_DEFAULT = {Matt:'👨',Katharine:'👩',Maggie:'👧',Joe:'👦',Louis:'🧒'};
 
 // ── IndexedDB setup ──────────────────────────────────────────────────────────
-var _db = null;
+var _photoDB = null;
 function openDB(cb) {
-  if (_db) { cb(_db); return; }
+  if (_photoDB) { cb(_photoDB); return; }
   var req = indexedDB.open('szearl_photos', 1);
   req.onupgradeneeded = function(e) {
     e.target.result.createObjectStore('photos');
   };
-  req.onsuccess = function(e) { _db = e.target.result; cb(_db); };
+  req.onsuccess = function(e) { _photoDB = e.target.result; cb(_photoDB); };
   req.onerror   = function()  { console.warn('IndexedDB unavailable'); cb(null); };
 }
 
