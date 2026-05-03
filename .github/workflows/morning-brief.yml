@@ -1,0 +1,18 @@
+name: Morning Brief
+
+on:
+  schedule:
+    # 7am AEST (UTC+10) = 21:00 UTC | During AEDT (UTC+11) fires at 8am
+    - cron: '0 21 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub Actions tab
+
+jobs:
+  send-brief:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger morning brief
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "x-brief-secret: ${{ secrets.BRIEF_SECRET }}" \
+            "${{ secrets.NETLIFY_FUNCTION_URL }}"

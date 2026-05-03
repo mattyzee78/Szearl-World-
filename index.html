@@ -823,6 +823,18 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
   <div style="padding:12px 20px 4px">
     <div style="font-size:13px;font-weight:700;color:var(--t2)" id="hDate"></div>
   </div>
+
+  <!-- Morning Brief card -->
+  <div id="briefCard" style="display:none;margin:0 20px 16px">
+    <div style="background:linear-gradient(135deg,#1a1535 0%,#2d2060 100%);border-radius:20px;padding:18px 20px;box-shadow:0 6px 20px rgba(26,21,53,.25)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:22px">☀️</div>
+        <div style="font-size:15px;font-weight:900;color:#fff">Morning Brief</div>
+        <div style="margin-left:auto;font-size:11px;font-weight:700;color:rgba(255,255,255,.45)" id="briefDate"></div>
+      </div>
+      <div id="briefText" style="font-size:14px;color:rgba(255,255,255,.85);line-height:1.6"></div>
+    </div>
+  </div>
   <div class="tbn ani" onclick="goTab('calendar')">
     <div class="tbl">Today at a glance</div>
     <div class="tbc" id="tCount">Loading&#8230;</div>
@@ -898,6 +910,17 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
     <div class="sh"><div class="st">Coming up</div><div class="sl" onclick="goTab('calendar')">Calendar &#8594;</div></div>
     <div id="upcoming"><div class="lsp"><div class="sp"></div></div></div>
   </div>
+
+  <!-- Family Notes -->
+  <div class="sec" style="margin-top:16px">
+    <div class="sh"><div class="st">Family Notes</div></div>
+    <div style="padding:0 20px 8px;display:flex;gap:8px">
+      <input id="noteInput" type="text" placeholder="Leave a note for the family…" style="flex:1;padding:12px 14px;border-radius:14px;border:1.5px solid var(--br);background:var(--sf);font-size:14px;font-family:inherit;color:var(--tx);outline:none" onkeydown="if(event.key==='Enter')postNote()">
+      <button onclick="postNote()" style="background:var(--brand);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:18px;cursor:pointer;font-weight:900">&#8593;</button>
+    </div>
+    <div id="notesFeed" style="padding:0 20px"></div>
+  </div>
+
   <div class="spacer"></div><div class="spacer"></div>
 </div>
 
@@ -1095,6 +1118,7 @@ html,body{height:100%;font-family:Nunito,sans-serif;background:var(--bg);color:v
   <div class="mst">Calendars</div>
   <div class="mi" onclick="openCalSettings()"><div class="mii" style="background:var(--bl)">&#128197;</div><div class="mib"><div class="mil">Connected calendars</div><div class="mis" id="calSub">Not connected</div></div><div class="mia">&#8250;</div></div>
   <div class="mi" onclick="doSync()"><div class="mii" style="background:var(--sl)">&#128260;</div><div class="mib"><div class="mil">Sync now</div><div class="mis" id="lastSync">Never synced</div></div><div class="mia">&#8250;</div></div>
+  <div class="mi" onclick="enableBriefNotifs()" id="miBrief"><div class="mii" style="background:#fef9c3">☀️</div><div class="mib"><div class="mil">Morning Brief</div><div class="mis" id="miBriefSub">Daily AI summary — tap to enable notifications</div></div><div class="mia">&#8250;</div></div>
   <div class="mst">Settings</div>
   <div class="mi" onclick="goTab('lists')"><div class="mii" style="background:var(--sl)">&#128221;</div><div class="mib"><div class="mil">Lists</div><div class="mis">Shopping, packing &amp; to-do lists</div></div><div class="mia">&#8250;</div></div>
   <div class="mi" onclick="launchKidsBoard()" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:14px;margin:0 20px 8px;border:2px solid #86efac"><div class="mii" style="background:#dcfce7;font-size:24px">&#127873;</div><div class="mib"><div class="mil" style="color:#15803d">Kids Board</div><div class="mis" style="color:#16a34a">Touch-screen door display</div></div><div class="mia" style="color:#16a34a;font-size:20px">&#8594;</div></div>
@@ -4222,6 +4246,155 @@ function installApp() {
     openM('mInstall');
   }
 }
+
+// ─── MORNING BRIEF ───────────────────────────────────────────────────────────
+function loadMorningBrief() {
+  if (!_db) return;
+  var today = new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+  _db.collection('families').doc(FAMILY_CODE).collection('briefs').doc(today).get()
+    .then(function(doc) {
+      if (!doc.exists) return;
+      var d = doc.data();
+      var card = document.getElementById('briefCard');
+      var txt  = document.getElementById('briefText');
+      var dt   = document.getElementById('briefDate');
+      if (!card) return;
+      txt.textContent = d.text;
+      dt.textContent  = d.date || today;
+      card.style.display = 'block';
+    }).catch(function() {});
+}
+
+// ─── FAMILY NOTES ────────────────────────────────────────────────────────────
+var _unsubNotes = null;
+
+function subscribeNotes() {
+  if (!_db) return;
+  if (_unsubNotes) _unsubNotes();
+  var cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  _unsubNotes = _db.collection('families').doc(FAMILY_CODE).collection('notes')
+    .where('createdAt', '>=', cutoff)
+    .orderBy('createdAt', 'desc')
+    .limit(20)
+    .onSnapshot(function(snap) {
+      renderNotesFeed(snap.docs.map(function(d) { return d.data(); }));
+    }, function() {});
+}
+
+function renderNotesFeed(notes) {
+  var el = document.getElementById('notesFeed');
+  if (!el) return;
+  if (!notes.length) {
+    el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:4px 0 12px">No notes yet — be the first!</div>';
+    return;
+  }
+  el.innerHTML = notes.map(function(n) {
+    var ts = n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : new Date();
+    var ago = timeAgo(ts);
+    var color = MC[n.author] || 'var(--brand)';
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--br)">' +
+      '<div style="width:32px;height:32px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">' + (ME[n.author] || '👤') + '</div>' +
+      '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--tx)">' + n.author + ' <span style="font-weight:400;color:var(--t3);font-size:12px">· ' + ago + '</span></div>' +
+      '<div style="font-size:14px;color:var(--t2);margin-top:2px">' + escHtml(n.text) + '</div></div></div>';
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function timeAgo(date) {
+  var s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function postNote() {
+  var inp = document.getElementById('noteInput');
+  var text = (inp && inp.value || '').trim();
+  if (!text) return;
+  if (!_db) { t('Not connected', true); return; }
+  if (!S.user) { t('Sign in first', true); return; }
+  inp.value = '';
+  _db.collection('families').doc(FAMILY_CODE).collection('notes').add({
+    text: text,
+    author: S.user.name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(e) { t('Could not post note: ' + e.message, true); });
+}
+
+// ─── WEB PUSH SUBSCRIPTION ───────────────────────────────────────────────────
+var VAPID_PUBLIC_KEY = 'BP3ER4Pm8AjtyvHvYF5TlKwL68s8LUxEamPoMkMv3Zoy376rN5-C4R8Y7IVXlRuv0hR-cb2xLT6ApVC1r3WVT0s';
+
+function urlBase64ToUint8Array(b64) {
+  var pad = b64.length % 4 === 0 ? '' : '===='.slice(b64.length % 4);
+  var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function subscribePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!S.user || !_db) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription().then(function(existing) {
+      if (existing) return savePushSub(existing);
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      }).then(savePushSub);
+    });
+  }).catch(function() {});
+}
+
+function savePushSub(sub) {
+  if (!sub || !S.user) return;
+  return fetch('/.netlify/functions/save-push-sub', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subscription: sub.toJSON(), userName: S.user.name })
+  }).catch(function() {});
+}
+
+function enableBriefNotifs() {
+  var sub = document.getElementById('miBriefSub');
+  if (Notification.permission === 'granted') {
+    subscribePush();
+    if (sub) sub.textContent = 'Notifications enabled ✓';
+    t('Morning brief notifications are on!');
+    return;
+  }
+  Notification.requestPermission().then(function(p) {
+    if (p === 'granted') {
+      subscribePush();
+      if (sub) sub.textContent = 'Notifications enabled ✓';
+      t('Morning brief notifications are on!');
+    } else {
+      t('Please allow notifications in your browser settings', true);
+    }
+  });
+}
+
+// Hook into showMainApp to load brief + notes + subscribe push
+var _origShowMain = showMainApp;
+showMainApp = function() {
+  _origShowMain.apply(this, arguments);
+  // Defer until Firestore is ready
+  setTimeout(function() {
+    loadMorningBrief();
+    subscribeNotes();
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(function(p) {
+        if (p === 'granted') subscribePush();
+      });
+    } else if (Notification.permission === 'granted') {
+      subscribePush();
+    }
+  }, 1500);
+};
 </script>
 
 <!-- ═══════════════════════════════════════════════════════

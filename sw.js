@@ -12,3 +12,22 @@ self.addEventListener('fetch', e => {
     )
   );
 });
+
+self.addEventListener('push', e => {
+  const data = e.data ? e.data.json() : { title: '☀️ Morning Brief', body: 'Your morning brief is ready.' };
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'morning-brief',
+      renotify: true,
+      data: { url: '/' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow(e.notification.data.url || '/'));
+});
